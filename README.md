@@ -356,6 +356,14 @@ Per aturar el servidor: `Ctrl+C` a la terminal.
    - Desglossament de High Card: As Alt vs altres.
    - Draws: Flush Draw, OESD, Gutshot, Backdoor FD, Backdoor SD.
 
+> **Disposició de la interfície**: els panells **«Rang del RIVAL»** i **«Board»** es
+> mostren **en fila horitzontal** (un al costat de l'altre) a la columna esquerra,
+> mentre que el **Panell de Resultats** ocupa la columna dreta. D'aquesta manera
+> tot —graella 13×13, board i resultats— queda visible en una sola finestra del
+> navegador sense fer scroll vertical en pantalles ≥1200px d'amplada. En pantalles
+> més estretes, els panells s'apilen automàticament (disseny responsive: board
+> sota el rang per sota de 760px, i tot en una columna per sota de 1200px).
+
 ---
 
 ## 🔌 API (si vols integrar-la programàticament)

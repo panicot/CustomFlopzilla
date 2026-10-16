@@ -13,8 +13,10 @@
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:24px;min-height:100vh}
 h1{font-size:1.6rem;margin-bottom:4px}
 .subtitle{color:var(--muted);margin-bottom:20px;font-size:.9rem}
-.layout{display:grid;grid-template-columns:minmax(340px,480px) 1fr;gap:20px;align-items:start}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.layout{display:grid;grid-template-columns:minmax(560px,1.15fr) minmax(420px,1fr);gap:20px;align-items:start}
+@media(max-width:1200px){.layout{grid-template-columns:1fr}}
+.inputs-row{display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(260px,.9fr);gap:16px;align-items:start}
+@media(max-width:760px){.inputs-row{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
 .panel h2{font-size:1.05rem;margin-bottom:10px;color:var(--primary)}
 /* Graella 13x13 */
@@ -102,39 +104,41 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
 <p class="subtitle">Estil Flopzilla — Anàlisi estadística del <b>rang del rival</b> contra el board (sense mà pròpia)</p>
 
 <div class="layout">
-  <!-- Columna esquerra: inputs -->
+  <!-- Columna esquerra: inputs (Rang + Board en fila horitzontal) -->
   <div>
-    <div class="panel">
-      <h2>Rang del RIVAL (graella 13×13)</h2>
-      <div class="grid" id="rangeGrid"></div>
-      <div class="legend">
-        <span><i style="background:#3b1f2e"></i>Parells</span>
-        <span><i style="background:#1c3327"></i>Suited</span>
-        <span><i style="background:#26263a"></i>Offsuit</span>
+    <div class="inputs-row">
+      <div class="panel">
+        <h2>Rang del RIVAL (graella 13×13)</h2>
+        <div class="grid" id="rangeGrid"></div>
+        <div class="legend">
+          <span><i style="background:#3b1f2e"></i>Parells</span>
+          <span><i style="background:#1c3327"></i>Suited</span>
+          <span><i style="background:#26263a"></i>Offsuit</span>
+        </div>
+        <div class="counter">Combos seleccionats: <b id="selCount">0</b> · Cel·les: <b id="selCells">0</b></div>
+        <input type="text" id="rangeText" placeholder="Rang manual: AA+, AKs+, QQ, JTs ...">
+        <div class="btnrow">
+          <button class="action" id="btnAddRange">Afegir</button>
+          <button class="secondary" id="btnClearRange">Netejar selecció</button>
+        </div>
+        <div class="hint">El botó <b>Afegir</b> afegeix el rang manual (admet notació «+») a la selecció de la graella sense esborrar-la. Prem Intro per afegir ràpidament.</div>
       </div>
-      <div class="counter">Combos seleccionats: <b id="selCount">0</b> · Cel·les: <b id="selCells">0</b></div>
-      <input type="text" id="rangeText" placeholder="Rang manual: AA+, AKs+, QQ, JTs ...">
-      <div class="btnrow">
-        <button class="action" id="btnAddRange">Afegir</button>
-        <button class="secondary" id="btnClearRange">Netejar selecció</button>
-      </div>
-      <div class="hint">El botó <b>Afegir</b> afegeix el rang manual (admet notació «+») a la selecció de la graella sense esborrar-la. Prem Intro per afegir ràpidament.</div>
-    </div>
 
-    <div class="panel">
-      <h2>Board (cartes comunitàries)</h2>
-      <div class="tabs">
-        <div class="tab active" data-street="flop">Flop (3)</div>
-        <div class="tab" data-street="turn">Turn (4)</div>
-        <div class="tab" data-street="river">River (5)</div>
+      <div class="panel">
+        <h2>Board (cartes comunitàries)</h2>
+        <div class="tabs">
+          <div class="tab active" data-street="flop">Flop (3)</div>
+          <div class="tab" data-street="turn">Turn (4)</div>
+          <div class="tab" data-street="river">River (5)</div>
+        </div>
+        <div class="slots" id="boardSlots"></div>
+        <input type="text" id="boardText" placeholder="Input manual: Ah Qd 5c">
+        <div class="btnrow">
+          <button class="secondary" id="btnClearBoard">Netejar board</button>
+          <button class="action" id="btnAnalyze">⚡ Analitzar rang</button>
+        </div>
+        <div class="hint">Format carta: rang (A,K,Q,J,T,9..2) + pal (h,c,d,s). Ex: Ah Kh 5c. Fes clic a una slot buida per triar la carta d'una finestra amb totes les 52 cartes; clic a una slot plena per buidar-la.</div>
       </div>
-      <div class="slots" id="boardSlots"></div>
-      <input type="text" id="boardText" placeholder="Input manual: Ah Qd 5c">
-      <div class="btnrow">
-        <button class="secondary" id="btnClearBoard">Netejar board</button>
-        <button class="action" id="btnAnalyze">⚡ Analitzar rang</button>
-      </div>
-      <div class="hint">Format carta: rang (A,K,Q,J,T,9..2) + pal (h,c,d,s). Ex: Ah Kh 5c. Fes clic a una slot buida per triar la carta d'una finestra amb totes les 52 cartes; clic a una slot plena per buidar-la.</div>
     </div>
   </div>
 

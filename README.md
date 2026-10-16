@@ -335,10 +335,19 @@ Per aturar el servidor: `Ctrl+C` a la terminal.
    - Triangular inferior → offsuit (AKo, QJo, …) — color gris
    - El comptador de combos seleccionats s'actualitza en temps real.
    - També pots escriure un rang en format text (p. ex. `AA+, AKs+, QQ, 77, KTs`) al
-     camp d'input manual.
-2. **Board**: introdueix les cartes comunitàries als slots gràfics (clicant per
-   netejar-los) o escriu-los manualment amb notació `Ah Qd 5c` (rang + pal:
-   `s`=espades, `h`=cors, `d`=basts, `c`=trèvols; `T`=10).
+     camp d'input manual i prémer el botó **«Afegir»** (o la tecla Intro). Afegeix
+     les cel·les corresponents a la selecció de la graella sense esborrar-la, amb
+     la mateixa convenció d'expansió «+» que el backend (`AKs+` → AKs, AQs, AJs,
+     ATs, KQs, KJs, QJs, JTs; `AA+` → AA…TT). Les mans sense sufixo (`QQ`, `AK`)
+     activen totes les variants aplicables; els tokens no reconeguts s'avisen.
+2. **Board**: fes clic a qualsevol slot buida i s'obrirà una **finestra emergent
+   amb les 52 cartes** (13 rangs × 4 pals, acolorides per pal) perquè triïs la carta
+   sense escriure res; les cartes ja presents al board apareixen ratllades i no es
+   poden repetir. Després de cada elecció el selector avança automàticament a la
+   següent slot buida. Podeu tancar la finestra amb «Fet», la ×, Escape o un clic al
+   fons, i buidar una slot plena amb un clic damunt seu. També podeu escriure el
+   board manualment amb notació `Ah Qd 5c` (rang + pal: `s`=espades, `h`=cors,
+   `d`=basts, `c`=trèvols; `T`=10).
 3. **Carrer**: canvia les pestanyes **Flop (3 cartes) / Turn (4) / River (5)**.
 4. Prem **Analitzar** i el panell de resultats mostrarà:
    - Total de combos vàlids analitzats i combos exclosos per duplicar cartes del board.
@@ -346,6 +355,14 @@ Per aturar el servidor: `Ctrl+C` a la terminal.
    - Desglossament de One Pair: Overpair, Top / Second / Third / Bottom Pair.
    - Desglossament de High Card: As Alt vs altres.
    - Draws: Flush Draw, OESD, Gutshot, Backdoor FD, Backdoor SD.
+
+> **Disposició de la interfície**: els panells **«Rang del RIVAL»** i **«Board»** es
+> mostren **en fila horitzontal** (un al costat de l'altre) a la columna esquerra,
+> mentre que el **Panell de Resultats** ocupa la columna dreta. D'aquesta manera
+> tot —graella 13×13, board i resultats— queda visible en una sola finestra del
+> navegador sense fer scroll vertical en pantalles ≥1200px d'amplada. En pantalles
+> més estretes, els panells s'apilen automàticament (disseny responsive: board
+> sota el rang per sota de 760px, i tot en una columna per sota de 1200px).
 
 ---
 

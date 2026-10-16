@@ -13,8 +13,10 @@
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:24px;min-height:100vh}
 h1{font-size:1.6rem;margin-bottom:4px}
 .subtitle{color:var(--muted);margin-bottom:20px;font-size:.9rem}
-.layout{display:grid;grid-template-columns:minmax(340px,480px) 1fr;gap:20px;align-items:start}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.layout{display:grid;grid-template-columns:minmax(560px,1.15fr) minmax(420px,1fr);gap:20px;align-items:start}
+@media(max-width:1200px){.layout{grid-template-columns:1fr}}
+.inputs-row{display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(260px,.9fr);gap:16px;align-items:start}
+@media(max-width:760px){.inputs-row{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
 .panel h2{font-size:1.05rem;margin-bottom:10px;color:var(--primary)}
 /* Graella 13x13 */
@@ -75,6 +77,26 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
 .legend{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin-top:8px;flex-wrap:wrap}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .empty{color:var(--muted);font-size:.9rem;padding:24px;text-align:center}
+/* Modal selector de cartes */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;
+  max-width:560px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.modal-head h3{font-size:1.05rem;color:var(--primary)}
+.modal-close{background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;padding:2px 6px}
+.modal-close:hover{color:var(--danger)}
+.modal-sub{color:var(--muted);font-size:.82rem;margin-bottom:12px}
+.card-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:5px}
+.pcard{aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#0f1830;border:1px solid var(--border);border-radius:7px;cursor:pointer;user-select:none;
+  font-weight:700;font-size:.95rem;line-height:1.1;transition:transform .08s,border-color .15s,opacity .15s}
+.pcard:hover:not(.disabled){transform:scale(1.12);border-color:var(--primary);z-index:2}
+.pcard .psuit{font-size:.85rem}
+.pcard.disabled{opacity:.25;cursor:not-allowed;text-decoration:line-through}
+.pcard.hc,.pcard.hd{color:var(--danger)}.pcard.cs{color:var(--success)}.pcard.ss{color:#dbe4ff}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 </style>
 </head>
 <body>
@@ -82,38 +104,41 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
 <p class="subtitle">Estil Flopzilla — Anàlisi estadística del <b>rang del rival</b> contra el board (sense mà pròpia)</p>
 
 <div class="layout">
-  <!-- Columna esquerra: inputs -->
+  <!-- Columna esquerra: inputs (Rang + Board en fila horitzontal) -->
   <div>
-    <div class="panel">
-      <h2>Rang del RIVAL (graella 13×13)</h2>
-      <div class="grid" id="rangeGrid"></div>
-      <div class="legend">
-        <span><i style="background:#3b1f2e"></i>Parells</span>
-        <span><i style="background:#1c3327"></i>Suited</span>
-        <span><i style="background:#26263a"></i>Offsuit</span>
+    <div class="inputs-row">
+      <div class="panel">
+        <h2>Rang del RIVAL (graella 13×13)</h2>
+        <div class="grid" id="rangeGrid"></div>
+        <div class="legend">
+          <span><i style="background:#3b1f2e"></i>Parells</span>
+          <span><i style="background:#1c3327"></i>Suited</span>
+          <span><i style="background:#26263a"></i>Offsuit</span>
+        </div>
+        <div class="counter">Combos seleccionats: <b id="selCount">0</b> · Cel·les: <b id="selCells">0</b></div>
+        <input type="text" id="rangeText" placeholder="Rang manual: AA+, AKs+, QQ, JTs ...">
+        <div class="btnrow">
+          <button class="action" id="btnAddRange">Afegir</button>
+          <button class="secondary" id="btnClearRange">Netejar selecció</button>
+        </div>
+        <div class="hint">El botó <b>Afegir</b> afegeix el rang manual (admet notació «+») a la selecció de la graella sense esborrar-la. Prem Intro per afegir ràpidament.</div>
       </div>
-      <div class="counter">Combos seleccionats: <b id="selCount">0</b> · Cel·les: <b id="selCells">0</b></div>
-      <input type="text" id="rangeText" placeholder="Rang manual: AA+, AKs+, QQ, JTs ...">
-      <div class="btnrow">
-        <button class="secondary" id="btnClearRange">Netejar selecció</button>
-      </div>
-      <div class="hint">La graella envia els combos individuals; el camp manual admet notació amb «+».</div>
-    </div>
 
-    <div class="panel">
-      <h2>Board (cartes comunitàries)</h2>
-      <div class="tabs">
-        <div class="tab active" data-street="flop">Flop (3)</div>
-        <div class="tab" data-street="turn">Turn (4)</div>
-        <div class="tab" data-street="river">River (5)</div>
+      <div class="panel">
+        <h2>Board (cartes comunitàries)</h2>
+        <div class="tabs">
+          <div class="tab active" data-street="flop">Flop (3)</div>
+          <div class="tab" data-street="turn">Turn (4)</div>
+          <div class="tab" data-street="river">River (5)</div>
+        </div>
+        <div class="slots" id="boardSlots"></div>
+        <input type="text" id="boardText" placeholder="Input manual: Ah Qd 5c">
+        <div class="btnrow">
+          <button class="secondary" id="btnClearBoard">Netejar board</button>
+          <button class="action" id="btnAnalyze">⚡ Analitzar rang</button>
+        </div>
+        <div class="hint">Format carta: rang (A,K,Q,J,T,9..2) + pal (h,c,d,s). Ex: Ah Kh 5c. Fes clic a una slot buida per triar la carta d'una finestra amb totes les 52 cartes; clic a una slot plena per buidar-la.</div>
       </div>
-      <div class="slots" id="boardSlots"></div>
-      <input type="text" id="boardText" placeholder="Input manual: Ah Qd 5c">
-      <div class="btnrow">
-        <button class="secondary" id="btnClearBoard">Netejar board</button>
-        <button class="action" id="btnAnalyze">⚡ Analitzar rang</button>
-      </div>
-      <div class="hint">Format carta: rang (A,K,Q,J,T,9..2) + pal (h,c,d,s). Ex: Ah Kh 5c. Fes clic a una slot plena per buidar-la.</div>
     </div>
   </div>
 
@@ -122,6 +147,22 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
     <div class="panel" id="resultsPanel">
       <h2>Panell de Resultats</h2>
       <div id="resultsBody"><div class="empty">Selecciona un rang i un board, i prem <b>Analitzar</b>.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal selector de cartes per al board -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+    <div class="modal-head">
+      <h3 id="cardModalTitle">Tria una carta</h3>
+      <button class="modal-close" id="btnCardCancel" title="Tancar">×</button>
+    </div>
+    <p class="modal-sub" id="cardModalSub"></p>
+    <div class="card-grid" id="cardGrid"></div>
+    <div class="modal-foot">
+      <button class="secondary" id="btnCardClearSlot">Netejar aquesta slot</button>
+      <button class="action" id="btnCardClose">Fet</button>
     </div>
   </div>
 </div>
@@ -171,6 +212,89 @@ document.getElementById("btnClearRange").addEventListener("click",()=>{
   updateCounter();
 });
 
+/* ---------- Afegir rang manual a la graella ---------- */
+const RANK_SET = new Set(RANKS);
+// Expansions de cel·les per a notació amb «+», idèntiques a la convenció del
+// backend (backend/range_parser.py, expand_code):
+//   AA+  -> tots els parells des d'AA fins TT (aturant-se a T)
+//   AKs+ -> Fase 1: carta alta fixa, segona baixa fins a T (AKs,AQs,AJs,ATs)
+//           Fase 2: es baixa la carta alta mantenint el gap (KQs,QJs,JTs)
+//                   + gap+1 en el primer descens (KJs)
+function expandPlusCells(tok){
+  const m=/^([AKQJT2-9])([AKQJT2-9])(s|o)?\+$/.exec(tok);
+  if(!m)return null;
+  const hi=m[1], lo=m[2], suffix=m[3];
+  const i1=RANKS.indexOf(hi), i2=RANKS.indexOf(lo);
+  if(i1<0||i2<0)return null;
+  // Parells: XX+ -> XX, (X-1)(X-1)... aturant-se a TT
+  if(suffix===undefined){
+    if(hi!==lo)return [];
+    const stop=Math.max(i1,RANKS.indexOf("T"));
+    const out=[];
+    for(let idx=i1;idx<=stop;idx++)out.push(RANKS[idx]+RANKS[idx]);
+    return out;
+  }
+  if(hi===lo)return [];
+  // Normalitzem: h = carta alta (índex menor)
+  const [H,L]=(i1<i2)?[i1,i2]:[i2,i1];
+  const kind=suffix;
+  const tIdx=RANKS.indexOf("T");
+  const out=[], seen=new Set();
+  const add=(a,b)=>{const c=a+b+kind;if(!seen.has(c)){seen.add(c);out.push(c);}};
+  // Fase 1: carta alta fixa, segona des de L fins a T (inclusive)
+  for(let l=L;l<=tIdx;l++){
+    if(l<=H)continue;
+    add(RANKS[H],RANKS[l]);
+  }
+  // Fase 2: baixem la carta alta pas a pas mantenint el gap; afegim gap+1 només
+  // en el primer descens. Ens aturem si la segona carta queda per sota de T.
+  let d=1;
+  while(true){
+    const hIdx=H+d, lIdx=L+d;
+    if(hIdx>=RANKS.length||lIdx>=RANKS.length)break;
+    if(lIdx>tIdx)break;
+    add(RANKS[hIdx],RANKS[lIdx]);
+    if(d===1&&lIdx+1<=tIdx)add(RANKS[hIdx],RANKS[lIdx+1]);
+    d++;
+  }
+  return out;
+}
+function addManualRange(){
+  const input=document.getElementById("rangeText");
+  const raw=input.value.trim();
+  if(!raw){alert("Escriu primer un rang manual (ex: AA+, AKs+, QQ, JTs).");return;}
+  const toks=raw.split(/[\s,;]+/).filter(Boolean);
+  const added=[],invalid=[];
+  for(const t of toks){
+    const norm=t.toUpperCase().replace(/\s/g,"");
+    let codes=null;
+    if(norm.endsWith("+")){
+      codes=expandPlusCells(norm);
+    }else if(/^[AKQJT2-9]{2}[so]?$/.test(norm)){
+      const r1=norm[0],r2=norm[1];
+      if(RANK_SET.has(r1)&&RANK_SET.has(r2)){
+        if(r1===r2)codes=[r1+r2];
+        else if(norm.length===2)codes=[r1+r2+"s",r1+r2+"o"]; // sense sufixo: ambdues variants
+        else codes=[norm];
+      }
+    }
+    if(!codes||!codes.length){invalid.push(t);continue;}
+    for(const c of codes){
+      const cell=document.querySelector(`.cell[data-code="${c}"]`);
+      if(cell&&!selected.has(c)){selected.add(c);cell.classList.add("selected");added.push(c);}
+    }
+  }
+  updateCounter();
+  input.value="";
+  let msg=`✅ Afegides ${added.length} cel·la(es) a la selecció.`;
+  if(invalid.length)msg+=`\n⚠️ No reconegudes: ${invalid.join(", ")}`;
+  alert(msg);
+}
+document.getElementById("btnAddRange").addEventListener("click",addManualRange);
+document.getElementById("rangeText").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){addManualRange();e.preventDefault();}
+});
+
 /* ---------- Tabs & Board ---------- */
 document.querySelectorAll(".tab").forEach(t=>{
   t.addEventListener("click",()=>{
@@ -197,24 +321,88 @@ function renderSlots(){
     }else{
       slot.textContent="+";
       slot.style.color="var(--muted)";
-      slot.title="Introdueix al camp manual o clic per omplir seqüencialment";
+      slot.title="Clic per triar la carta en una finestra amb les 52 cartes";
     }
     slot.addEventListener("click",()=>{
       if(c){board[idx]=null;renderSlots();}
-      else{promptFill(idx);}
+      else{openCardPicker(idx);}
     });
     wrap.appendChild(slot);
   });
 }
-function promptFill(idx){
-  const v=prompt(`Carta per al slot ${idx+1} (ex: Ah, Td, 9c):`);
-  if(!v)return;
-  const card=parseCard(v.trim());
-  if(!card){alert("Carta no vàlida. Format: A2-9TJQK + h/c/d/s");return;}
-  if(board.some((b,i)=>i!==idx&&b===card)){alert("Aquesta carta ja és al board.");return;}
-  board[idx]=card;
-  renderSlots();
+
+/* ---------- Modal selector de cartes (52 cartes) ---------- */
+const SUITS = ["h","d","c","s"];           // cors, diamants, trèvols, piques
+let pickerSlotIdx = -1;                     // slot que s'està omplint
+
+function buildCardGrid(){
+  const grid=document.getElementById("cardGrid");
+  grid.innerHTML="";
+  for(const s of SUITS){
+    for(const r of RANKS){
+      const card=r+s;
+      const el=document.createElement("div");
+      el.className=`pcard ${s}${s}`;        // hc / hd / cs / ss -> colors del pal
+      el.dataset.card=card;
+      el.innerHTML=`<span>${r}</span><span class="psuit">${SUIT_SYMBOL[s]}</span>`;
+      el.title=card;
+      el.addEventListener("click",()=>pickCard(card));
+      grid.appendChild(el);
+    }
+  }
 }
+function refreshCardStates(){
+  // Deshabilita les cartes ja presents al board (altres slots)
+  document.querySelectorAll("#cardGrid .pcard").forEach(el=>{
+    const used=board.some((b,i)=>i!==pickerSlotIdx&&b===el.dataset.card);
+    el.classList.toggle("disabled",used);
+  });
+}
+function openCardPicker(idx){
+  pickerSlotIdx=idx;
+  buildCardGrid();
+  refreshCardStates();
+  document.getElementById("cardModalTitle").textContent=`Tria una carta per al slot ${idx+1}`;
+  document.getElementById("cardModalSub").textContent=
+    "Totes les 52 cartes disponibles. Les ja presents al board apareixen ratllades.";
+  document.getElementById("btnCardClearSlot").style.display=
+    board[idx]?"inline-block":"none";
+  document.getElementById("cardModal").classList.add("open");
+}
+function closeCardPicker(){
+  document.getElementById("cardModal").classList.remove("open");
+  pickerSlotIdx=-1;
+}
+function pickCard(card){
+  if(pickerSlotIdx<0)return;
+  if(board.some((b,i)=>i!==pickerSlotIdx&&b===card)){
+    alert("Aquesta carta ja és al board.");return;
+  }
+  board[pickerSlotIdx]=card;
+  renderSlots();
+  // Avança automàticament a la següent slot buida si existeix
+  const next=board.findIndex(b=>b===null);
+  if(next>=0){
+    pickerSlotIdx=next;
+    buildCardGrid();refreshCardStates();
+    document.getElementById("cardModalTitle").textContent=`Tria una carta per al slot ${next+1}`;
+    document.getElementById("btnCardClearSlot").style.display="none";
+  }else{
+    closeCardPicker();
+  }
+}
+document.getElementById("btnCardCancel").addEventListener("click",closeCardPicker);
+document.getElementById("btnCardClose").addEventListener("click",closeCardPicker);
+document.getElementById("btnCardClearSlot").addEventListener("click",()=>{
+  if(pickerSlotIdx>=0){board[pickerSlotIdx]=null;renderSlots();}
+  closeCardPicker();
+});
+document.getElementById("cardModal").addEventListener("click",e=>{
+  if(e.target.id==="cardModal")closeCardPicker();   // clic al fons tanca
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&document.getElementById("cardModal").classList.contains("open"))closeCardPicker();
+});
 function parseCard(str){
   const m=/^([AKQJT2-9])([shdc])$/i.exec(str);
   if(!m)return null;

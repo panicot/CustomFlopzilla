@@ -76,6 +76,27 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
 .hint{color:var(--muted);font-size:.78rem;margin-top:6px}
 .legend{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin-top:8px;flex-wrap:wrap}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+/* Presets de rang */
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{background:#0f1830;border:1px solid var(--border);color:var(--muted);border-radius:999px;
+  padding:5px 12px;font-size:.78rem;cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover{color:var(--text);border-color:var(--primary)}
+.chip.active{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
+.chip.custom{border-style:dashed}
+.preset-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#btnEditPresets{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;
+  padding:4px 10px;font-size:.75rem;cursor:pointer}
+#btnEditPresets:hover{color:var(--text);border-color:var(--primary)}
+.preset-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.preset-item{background:#0f1830;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.preset-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.preset-item-head b{font-size:.9rem}
+.badge{font-size:.7rem;background:#223052;color:var(--muted);border-radius:6px;padding:2px 8px}
+.preset-item textarea{width:100%;min-height:48px;resize:vertical;font-family:inherit}
+.preset-item-actions{display:flex;gap:8px;margin-top:8px;justify-content:flex-end}
+button.danger-ghost{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;
+  padding:6px 12px;font-size:.8rem;cursor:pointer}
+button.danger-ghost:hover{background:var(--danger);color:#fff}
 .empty{color:var(--muted);font-size:.9rem;padding:24px;text-align:center}
 /* Modal selector de cartes */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);
@@ -109,6 +130,10 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
     <div class="inputs-row">
       <div class="panel">
         <h2>Rang del RIVAL (graella 13×13)</h2>
+        <div class="preset-row">
+          <div class="presets" id="presetBar"></div>
+          <button id="btnEditPresets" title="Editar seleccions predeterminades">✏️ Editar presets</button>
+        </div>
         <div class="grid" id="rangeGrid"></div>
         <div class="legend">
           <span><i style="background:#3b1f2e"></i>Parells</span>
@@ -121,7 +146,7 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
           <button class="action" id="btnAddRange">Afegir</button>
           <button class="secondary" id="btnClearRange">Netejar selecció</button>
         </div>
-        <div class="hint">El botó <b>Afegir</b> afegeix el rang manual (admet notació «+») a la selecció de la graella sense esborrar-la. Prem Intro per afegir ràpidament.</div>
+        <div class="hint">El botó <b>Afegir</b> afegeix el rang manual (admet notació «+») a la selecció de la graella sense esborrar-la. Prem Intro per afegir ràpidament. Els <b>presets</b> substitueixen la selecció actual; pots editar-los amb «✏️ Editar presets».</div>
       </div>
 
       <div class="panel">
@@ -167,6 +192,25 @@ td{padding:6px 8px;border-bottom:1px solid #202c4a}
   </div>
 </div>
 
+<!-- Modal editor de presets -->
+<div class="modal-overlay" id="presetModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="presetModalTitle" style="max-width:640px">
+    <div class="modal-head">
+      <h3 id="presetModalTitle">Editar seleccions predeterminades</h3>
+      <button class="modal-close" id="btnPresetCancel" title="Tancar">×</button>
+    </div>
+    <p class="modal-sub">Modifica el nom i el rang (notació estàndard: «AA+, AKs+, QQ, JTs…»). Els canvis es desen al navegador (localStorage) i s'apliquen en prémer «Desar».</p>
+    <div class="preset-list" id="presetList"></div>
+    <div class="btnrow">
+      <button class="secondary" id="btnAddPreset">➕ Afegir preset</button>
+      <button class="secondary" id="btnRestorePresets">Restaurar valors per defecte</button>
+    </div>
+    <div class="modal-foot">
+      <button class="action" id="btnSavePresets">💾 Desar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 const RANKS = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
@@ -176,14 +220,24 @@ let street = "flop";
 let board = [null,null,null];        // array de longitud segons carrer
 
 /* ---------- Graella 13x13 ---------- */
+// Ordre de les columnes (capçalera horitzontal): A, K, Q, J, T, 9 ... 2
+const COL_RANKS = RANKS;
+// Ordre de les files (capçalera vertical), a la inversa: 2, 3 ... T, J, Q, K, A
+const ROW_RANKS = [...RANKS].reverse();
+function cellCode(rk, ck){
+  if(rk===ck) return rk+ck;                       // diagonal -> parells
+  const iR = ROW_RANKS.indexOf(rk), iC = COL_RANKS.indexOf(ck);
+  const pair=[rk,ck];
+  if(RANKS.indexOf(rk) > RANKS.indexOf(ck)) pair.reverse(); // carta alta primer
+  return pair[0]+pair[1]+(iC<iR?"s":"o");         // columna més alta que la fila -> suited
+}
 function buildGrid(){
   const g = document.getElementById("rangeGrid");
   g.innerHTML = "";
-  for(let i=0;i<13;i++){
-    for(let j=0;j<13;j++){
-      const code = RANKS[i]===RANKS[j] ? RANKS[i]+RANKS[j]
-                 : (i<j ? RANKS[i]+RANKS[j]+"s" : RANKS[i]+RANKS[j]+"o");
-      const kind = i===j ? "pair" : (i<j ? "suited":"offsuit");
+  for(const rk of ROW_RANKS){          // files: 2..A (inrevés que abans)
+    for(const ck of COL_RANKS){        // columnes: A..2
+      const code = cellCode(rk, ck);
+      const kind = rk===ck ? "pair" : (code.endsWith("s") ? "suited":"offsuit");
       const cell = document.createElement("div");
       cell.className = `cell ${kind}`;
       cell.textContent = code;
@@ -192,12 +246,199 @@ function buildGrid(){
       cell.addEventListener("click", ()=>{
         if(selected.has(code)){selected.delete(code);cell.classList.remove("selected");}
         else{selected.add(code);cell.classList.add("selected");}
+        markPresetInactive();
         updateCounter();
       });
       g.appendChild(cell);
     }
   }
 }
+/* ---------- Presets de rang (seleccions predeterminades) ---------- */
+const PRESET_DEFAULTS = [
+  {id:"top10", name:"Top 10 %", range:"AA-99, AKs, AQs, AJs, KQs, AQo"},
+  {id:"top15", name:"Top 15 %", range:"AA-77, AKs, AQs, AJs, ATs, KQs, KJs, QJs, JTs, T9s, AQo, AJo, KQo"},
+  {id:"top25", name:"Top 25 %", range:"AA-TT, A9s-A2s, K9s-K2s, Q8s-Q2s, J7s-J2s, T6s-T2s, 96s, 86s, 76s, 65s, 54s, AKo, AQo, AJo, ATo, KJo, KTo, QJo, JTo"},
+  {id:"pairs", name:"Parelles", range:"AA, KK, QQ, JJ, TT, 99, 88, 77, 66, 55, 44, 33, 22"},
+  {id:"anytwo", name:"Qualsevol dues", range:"+"},
+];
+const LS_KEY = "pokerRangePresets_v1";
+let presets = loadPresets();
+let activePresetId = null;
+
+function loadPresets(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr)&&arr.length) return arr;
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(PRESET_DEFAULTS));
+}
+function savePresets(){
+  try{localStorage.setItem(LS_KEY, JSON.stringify(presets));}catch(e){}
+}
+// Converteix un token de preset en codis de cel·la ("+" sol = totes les mans)
+function presetTokensToCells(tok){
+  const t = tok.toUpperCase().replace(/\s+/g,"");
+  if(t==="+"||t==="ANY"||t==="ANY2"){
+    const all=[];
+    for(const rk of ROW_RANKS)for(const ck of COL_RANKS)all.push(cellCode(rk,ck));
+    return all;
+  }
+  // Rangs amb guió: AA-99 (parells), AKs-AJs (suited consecutives), A5s-A2s ...
+  const dash=/^([AKQJT2-9]{2})-([AKQJT2-9]{2})(s|o)?$/.exec(t);
+  if(dash){
+    const hi=dash[1], lo=dash[2];
+    const sfx=dash[3]||"";
+    const i1=RANKS.indexOf(hi[0]), i2=RANKS.indexOf(lo[0]);
+    if(i1<0||i2<0||i1>i2)return [];
+    const out=[], seen=new Set();
+    const add=(a,b,k)=>{const c=a+b+k;if(!seen.has(c)){seen.add(c);out.push(c);}};
+    if(sfx===""){
+      // AA-99: només parells d'A a 9
+      for(let a=i1;a<=i2;a++)add(RANKS[a],RANKS[a],"");
+    }else{
+      // Amb sufixo (AKs-AJs, A9s-A2s...): la carta alta recorre hi..lo i la baixa
+      // va des de T fins al rang del costat baix (convenció estàndard dels rangs).
+      const tIdx=RANKS.indexOf("T");
+      for(let a=i1;a<=i2;a++){
+        for(let b=a+1;b<=i2;b++)add(RANKS[a],RANKS[b],sfx);
+        for(let b=Math.max(a+1,i2+1);b<=tIdx;b++)add(RANKS[a],RANKS[b],sfx);
+      }
+    }
+    return out;
+  }
+  if(t.endsWith("+")){
+    const e=expandPlusCells(t);
+    return e||[];
+  }
+  if(/^[AKQJT2-9]{2}[so]?$/.test(t)){
+    const r1=t[0],r2=t[1];
+    if(r1===r2)return [r1+r2];
+    if(t.length===2)return [r1+r2+"s",r1+r2+"o"];
+    return [t];
+  }
+  return [];
+}
+function parsePresetRange(str){
+  const out=[];
+  for(const tok of String(str||"").split(/[\s,;]+/).filter(Boolean)){
+    out.push(...presetTokensToCells(tok));
+  }
+  return [...new Set(out)];
+}
+function clearGridSelection(){
+  selected.clear();
+  document.querySelectorAll(".cell.selected").forEach(c=>c.classList.remove("selected"));
+}
+function applyPreset(id){
+  const p = presets.find(x=>x.id===id);
+  if(!p)return;
+  const codes = parsePresetRange(p.range);
+  clearGridSelection();
+  for(const c of codes){
+    const cell=document.querySelector(`.cell[data-code="${c}"]`);
+    if(cell){selected.add(c);cell.classList.add("selected");}
+  }
+  activePresetId=id;
+  renderPresetBar();
+  updateCounter();
+}
+function markPresetInactive(){
+  if(activePresetId===null)return;
+  activePresetId=null;
+  renderPresetBar();
+}
+function renderPresetBar(){
+  const bar=document.getElementById("presetBar");
+  bar.innerHTML="";
+  for(const p of presets){
+    const chip=document.createElement("button");
+    chip.type="button";
+    chip.className="chip"+(p.id===activePresetId?" active":"");
+    chip.textContent=p.name;
+    chip.title="Substitueix la selecció amb: "+p.range;
+    chip.addEventListener("click",()=>applyPreset(p.id));
+    bar.appendChild(chip);
+  }
+}
+/* Editor de presets (finestra emergent) */
+function openPresetEditor(){
+  const list=document.getElementById("presetList");
+  list.innerHTML="";
+  presets.forEach((p,idx)=>{
+    const item=document.createElement("div");
+    item.className="preset-item";
+    const head=document.createElement("div");
+    head.className="preset-item-head";
+    head.innerHTML=`<b>${escapeHtml(p.name)}</b><span class="badge">${parsePresetRange(p.range).length} cel·les · ${parsePresetRange(p.range).reduce((s,c)=>s+combosForCode(c),0)} combos</span>`;
+    const nameInp=document.createElement("input");
+    nameInp.type="text"; nameInp.value=p.name; nameInp.placeholder="Nom del preset";
+    const ta=document.createElement("textarea");
+    ta.value=p.range; ta.placeholder="Ex: AA+, AKs+, QQ, JTs ... ('+' = qualsevol dues cartes)";
+    const actions=document.createElement("div");
+    actions.className="preset-item-actions";
+    const btnUp=document.createElement("button");
+    btnUp.className="secondary"; btnUp.textContent="↑"; btnUp.title="Pujar";
+    btnUp.addEventListener("click",()=>{commitEditorValues();if(idx>0){[presets[idx-1],presets[idx]]=[presets[idx],presets[idx-1]];savePresets();openPresetEditor();}});
+    const btnDn=document.createElement("button");
+    btnDn.className="secondary"; btnDn.textContent="↓"; btnDn.title="Baixar";
+    btnDn.addEventListener("click",()=>{commitEditorValues();if(idx<presets.length-1){[presets[idx+1],presets[idx]]=[presets[idx],presets[idx+1]];savePresets();openPresetEditor();}});
+    const btnDel=document.createElement("button");
+    btnDel.className="danger-ghost"; btnDel.textContent="🗑 Eliminar";
+    btnDel.addEventListener("click",()=>{
+      commitEditorValues();
+      if(presets.length<=1){alert("Ha d'haver-hi almenys un preset.");return;}
+      presets.splice(idx,1); savePresets();
+      if(activePresetId===p.id)activePresetId=null;
+      renderPresetBar(); openPresetEditor();
+    });
+    actions.append(btnUp,btnDn,btnDel);
+    item.append(head,nameInp,ta,actions);
+    list.appendChild(item);
+  });
+  document.getElementById("presetModal").classList.add("open");
+}
+function commitEditorValues(){
+  const items=document.querySelectorAll("#presetList .preset-item");
+  items.forEach((el,idx)=>{
+    if(!presets[idx])return;
+    const n=el.querySelector("input").value.trim();
+    const r=el.querySelector("textarea").value.trim();
+    if(n)presets[idx].name=n;
+    presets[idx].range=r;
+  });
+}
+function closePresetEditor(){
+  document.getElementById("presetModal").classList.remove("open");
+}
+document.getElementById("btnEditPresets").addEventListener("click",openPresetEditor);
+document.getElementById("btnPresetCancel").addEventListener("click",closePresetEditor);
+document.getElementById("presetModal").addEventListener("click",e=>{
+  if(e.target.id==="presetModal")closePresetEditor();
+});
+document.getElementById("btnSavePresets").addEventListener("click",()=>{
+  commitEditorValues();
+  presets=presets.filter(p=>p.name&&p.range!==undefined);
+  savePresets(); renderPresetBar();
+  if(activePresetId)applyPreset(activePresetId);
+  closePresetEditor();
+});
+document.getElementById("btnAddPreset").addEventListener("click",()=>{
+  commitEditorValues();
+  let n=1; while(presets.some(p=>p.id==="custom"+n))n++;
+  presets.push({id:"custom"+n,name:`Preset ${presets.length+1}`,range:"AA+, KK, AKs"});
+  savePresets(); openPresetEditor();
+});
+document.getElementById("btnRestorePresets").addEventListener("click",()=>{
+  if(!confirm("Vols restaurar tots els presets als valors per defecte? Es perdran les teves personalitzacions."))return;
+  presets=JSON.parse(JSON.stringify(PRESET_DEFAULTS));
+  savePresets(); renderPresetBar(); openPresetEditor();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&document.getElementById("presetModal").classList.contains("open"))closePresetEditor();
+});
 function combosForCode(code){return code.endsWith("s")?4:code.length===2?6:12;}
 function updateCounter(){
   let cells=0,combos=0;
@@ -209,6 +450,7 @@ document.getElementById("btnClearRange").addEventListener("click",()=>{
   selected.clear();
   document.querySelectorAll(".cell.selected").forEach(c=>c.classList.remove("selected"));
   document.getElementById("rangeText").value="";
+  markPresetInactive();
   updateCounter();
 });
 
@@ -284,6 +526,7 @@ function addManualRange(){
       if(cell&&!selected.has(c)){selected.add(c);cell.classList.add("selected");added.push(c);}
     }
   }
+  if(added.length)markPresetInactive();
   updateCounter();
   input.value="";
   let msg=`✅ Afegides ${added.length} cel·la(es) a la selecció.`;
@@ -496,6 +739,7 @@ function renderResults(d){
 
 /* ---------- Init ---------- */
 buildGrid();
+renderPresetBar();
 renderSlots();
 updateCounter();
 </script>

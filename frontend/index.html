@@ -291,6 +291,18 @@ function savePresets(){
 }
 // Converteix un token de preset en codis de cel·la ("+" sol = totes les mans)
 function presetTokensToCells(tok){
+  const raw = String(tok||"").trim();
+  // Si el sufixo «+» va precedit d'un pal (AKs+, QQ+), s'expandeix directament
+  // amb la convenció del backend. Aquesta comprovació s'ha de fer ABANS de
+  // normalitzar/treure espais i abans de qualsevol altre tractament, perquè
+  // els tokens amb «+» intern (ex: "ATs+A2s") segueixen la via dels rangs amb guió.
+  // Nota: els parells amb «+» (QQ+, TT+) també passen per aquí. El regex accepta
+  // el sufixo de pal en minúscula O MAJÚSCULA perquè el token es normalitza a
+  // majúscules abans de comparar-lo (AKs+ -> AKS+: el pal 's' esdevé 'S').
+  const upper = raw.toUpperCase();
+  if(/^[AKQJT2-9][AKQJT2-9][so]?\+$/.test(raw) || /^[AKQJT2-9][AKQJT2-9][SO]?\+$/.test(upper)) {
+    return expandPlusCells(upper.replace(/\s+/g,"").replace(/([SO])\+$/,(mm,g)=>g.toLowerCase()+"+")) || [];
+  }
   const t = tok.toUpperCase().replace(/\s+/g,"");
   if(t==="+"||t==="ANY"||t==="ANY2"){
     const all=[];

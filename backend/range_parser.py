@@ -79,9 +79,10 @@ def expand_code(code: str) -> List[Tuple[str, str]]:
         if not plus:
             return _all_combos_for_pair(r1)
         # AA+ -> tots els parells des de AA fins TT (5 parells, 30 combos);
-        # KK+ -> KK..TT; 88+ -> 88,77,66,55,44,33,22 (convenció estàndard:
-        # "+ en parells" abasta 5 rangs cap avall, aturant-se a TT si cal).
-        stop = max(i1, RankIdx["T"])
+        # KK+ -> KK..TT; 99+ -> 99,88,...,22 (convenció estàndard: l'aturada a
+        # TT només s'aplica quan el parell indicat és TT o superior; si és més
+        # baix que TT, el "+" baixa fins a 22).
+        stop = max(i1, RankIdx["T"]) if i1 <= RankIdx["T"] else len(RANKS) - 1
         combos = []
         for idx in range(i1, stop + 1):  # A(0) és el més alt
             combos += _all_combos_for_pair(RANKS[idx])
@@ -121,11 +122,13 @@ def expand_code(code: str) -> List[Tuple[str, str]]:
     def mk(h: str, l: str):
         return _all_combos_for_suited(h, l) if kind == "s" else _all_combos_for_offsuit(h, l)
 
-    t_idx = RankIdx["T"]   # límit inferior de la segona carta (les "T+" no baixen de T)
-    j_idx = RankIdx["J"]   # límit inferior de la carta alta en fase 2
+    t_idx = RankIdx["T"]   # límit inferior estàndard de la segona carta
+    # Si la segona carta del token ja és per sota de T (ex: ATs+, A9s+), el
+    # "+ " baixa fins a 2 en lloc d'aturar-se a T.
+    stop_idx = t_idx if lo_i <= t_idx else len(RANKS) - 1
 
-    # Fase 1: carta alta fixa, segona des de lo_i fins a T (inclusive)
-    for l_idx in range(lo_i, t_idx + 1):
+    # Fase 1: carta alta fixa, segona des de lo_i fins al límit (inclusive)
+    for l_idx in range(lo_i, stop_idx + 1):
         if l_idx <= hi_i:
             continue
         add(mk(RANKS[hi_i], RANKS[l_idx]))
@@ -133,9 +136,9 @@ def expand_code(code: str) -> List[Tuple[str, str]]:
     # Fase 2: descendim la carta alta pas a pas (K, Q, J...) mantenint el GAP
     # original entre les dues cartes (AKs+ -> KQs, QJs, JTs) i afegint també el
     # gap+1 en el primer descens (-> KJs). Ens aturem quan la nova segona carta
-    # queda per sota de la segona original (ex: KT < T? no; QT per sota de... )
+    # queda per sota del límit inferior de fase 1.
     # Regla exacta que reproduceix l'exemple de l'especificació:
-    #   d = 1,2,3... : H'=hi+d, L'=lo+d ; inclosa si L' >= "T" i, a més,
+    #   d = 1,2,3... : H'=hi+d, L'=lo+d ; inclosa si L' >= límit i, a més,
     #   només si L' no queda estrictament per sota del límit inferior de fase 1.
     gap = lo_i - hi_i
     d = 1
@@ -144,10 +147,10 @@ def expand_code(code: str) -> List[Tuple[str, str]]:
         l_idx = lo_i + d
         if h_idx >= len(RANKS) or l_idx >= len(RANKS):
             break
-        if l_idx > t_idx:          # la segona per sota de T -> aturar diagonal
+        if l_idx > stop_idx:     # la segona per sota del límit -> aturar diagonal
             break
         add(mk(RANKS[h_idx], RANKS[l_idx]))           # mateix gap (KQs, QJs, JTs)
-        if d == 1 and l_idx + 1 <= t_idx:
+        if d == 1 and l_idx + 1 <= stop_idx:
             add(mk(RANKS[h_idx], RANKS[l_idx + 1]))   # gap+1 primer descens (KJs)
         d += 1
     return combos
